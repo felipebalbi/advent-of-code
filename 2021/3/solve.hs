@@ -11,21 +11,21 @@ mostCommon = head . maximumBy (compare `on` length) . group . sort
 leastCommon :: Ord a => [a] -> a
 leastCommon = head . minimumBy (compare `on` length) . group . sort
 
-oxygen :: [String] -> Int
-oxygen strs = binToInt $ go 0 ((length (transpose strs)) - 1) strs
+decode :: (String -> Char) -> [String] -> Int
+decode f strs = binToInt $ go 0 max strs
   where
-    go pos maxPos xs = top : if   pos < maxPos
-                             then go (pos + 1) maxPos (filter (\str -> (str !! pos) == top) xs)
-                             else []
-      where top = mostCommon $ (!!pos) (transpose xs)
+    max = length (transpose strs) - 1
+    go pos maxPos xs = needle : if   pos < maxPos
+                                then go (pos + 1) maxPos (filter keepNeedle xs)
+                                else []
+      where keepNeedle = (\str -> (str !! pos) == needle)
+            needle = f $ (!!pos) (transpose xs)
+
+oxygen :: [String] -> Int
+oxygen = decode mostCommon
 
 co2 :: [String] -> Int
-co2 strs = binToInt $ go 0 ((length (transpose strs)) - 1) strs
-  where
-    go pos maxPos xs = bottom : if   pos < maxPos
-                             then go (pos + 1) maxPos (filter (\str -> (str !! pos) == bottom) xs)
-                             else []
-      where bottom = leastCommon $ (!!pos) (transpose xs)
+co2 = decode leastCommon
 
 solve :: [String] -> Int
 solve nums = (oxygen nums) * (co2 nums)
