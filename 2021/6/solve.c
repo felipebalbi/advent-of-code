@@ -60,7 +60,7 @@ int main(void)
 		fishes[num]++;
 	}
 
-	for (i = 0; i < 80; i++)
+	for (i = 0; i < 256; i++)
 		next_day();
 
 	printf("total: %lld\n", sum());
