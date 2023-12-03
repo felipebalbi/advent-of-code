@@ -1,0 +1,13 @@
+[package]
+name = "day3"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+glam = "0.24.2"
+itertools.workspace = true
+nom = { workspace = true }
+nom_locate = "4.2.0"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
