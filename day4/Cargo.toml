@@ -1,0 +1,11 @@
+[package]
+name = "day4"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+itertools = { workspace = true }
+nom = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
