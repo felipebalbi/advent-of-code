@@ -1,30 +1,44 @@
-use std::collections::BTreeMap;
-
 use anyhow::{Context, Result};
 use nom::{
     bytes::complete::tag,
-    character::complete::{self, line_ending, space1},
+    character::complete::{self, line_ending, space0, space1},
     combinator::map,
-    multi::separated_list1,
-    sequence::tuple,
+    multi::{fold_many1, separated_list1},
+    sequence::{pair, tuple},
     IResult,
 };
+use std::collections::{BTreeMap, HashSet};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Card {
     id: u32,
-    winning: Vec<u32>,
-    own: Vec<u32>,
+    winning: HashSet<u32>,
+    own: HashSet<u32>,
 }
 
-fn own_numbers(input: &str) -> IResult<&str, Vec<u32>> {
-    separated_list1(space1, complete::u32)(input)
+#[tracing::instrument]
+fn numbers(input: &str) -> IResult<&str, HashSet<u32>> {
+    fold_many1(
+        pair(complete::u32, space0),
+        HashSet::new,
+        |mut acc, (number, _)| {
+            acc.insert(number);
+            acc
+        },
+    )(input)
 }
 
-fn winning_numbers(input: &str) -> IResult<&str, Vec<u32>> {
-    separated_list1(space1, complete::u32)(input)
+#[tracing::instrument]
+fn own_numbers(input: &str) -> IResult<&str, HashSet<u32>> {
+    numbers(input)
 }
 
+#[tracing::instrument]
+fn winning_numbers(input: &str) -> IResult<&str, HashSet<u32>> {
+    numbers(input)
+}
+
+#[tracing::instrument]
 fn card(input: &str) -> IResult<&str, Card> {
     map(
         tuple((
@@ -34,7 +48,7 @@ fn card(input: &str) -> IResult<&str, Card> {
             tag(":"),
             space1,
             winning_numbers,
-            tag(" |"),
+            tag("|"),
             space1,
             own_numbers,
         )),
@@ -42,6 +56,7 @@ fn card(input: &str) -> IResult<&str, Card> {
     )(input)
 }
 
+#[tracing::instrument]
 fn cards(input: &str) -> IResult<&str, Vec<Card>> {
     separated_list1(line_ending, card)(input)
 }
@@ -57,11 +72,7 @@ fn process(input: &'static str) -> Result<String> {
         .map(|card| {
             map.entry(card.id).and_modify(|e| *e += 1).or_insert(1);
 
-            let count = card
-                .own
-                .iter()
-                .filter(|number| card.winning.contains(*number))
-                .count();
+            let count = card.winning.intersection(&card.own).count();
 
             let times = *map.get(&card.id).unwrap();
 
