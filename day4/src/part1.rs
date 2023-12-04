@@ -81,12 +81,8 @@ fn process(input: &'static str) -> Result<String> {
 }
 
 #[tracing::instrument]
-pub fn part1() -> Result<()> {
-    let file = include_str!("../input1.txt");
-    let result = process(file).context("process part 1")?;
-    println!("Part 1: {}", result);
-
-    Ok(())
+pub fn part1(input: &'static str) -> Result<String> {
+    process(input).context("process part 1")
 }
 
 #[cfg(test)]

@@ -9,3 +9,11 @@ itertools = { workspace = true }
 nom = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+divan = { workspace = true }
+
+[[bench]]
+name = "{{project-name}}-bench"
+path = "benches/divan.rs"
+harness = false

@@ -1,17 +1,13 @@
 use anyhow::{Context, Result};
 
 #[tracing::instrument]
-fn process(_input: &str) -> Result<String> {
+fn process(_input: &'static str) -> Result<String> {
     Ok("".to_string())
 }
 
 #[tracing::instrument]
-pub fn part2() -> Result<()> {
-    let file = include_str!("../input2.txt");
-    let result = process(file).context("process part 2")?;
-    println!("Part 2: {}", result);
-
-    Ok(())
+pub fn part2(input: &'static str) -> Result<String> {
+    process(input).context("process part 2")
 }
 
 #[cfg(test)]
