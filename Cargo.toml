@@ -13,10 +13,10 @@ petgraph = "0.6.4"
 rayon = "1.8.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
+test-log = { version = "0.2.13", default-features = false, features = ["trace"] }
 thiserror = "1.0.50"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter"] }
 tracing-tracy = "0.10.4"
 tracy-client = "0.16.4"
 tracy-client-sys = "0.22.0"
-test-log = { version = "0.2.13", default-features = false, features = ["trace"] }
