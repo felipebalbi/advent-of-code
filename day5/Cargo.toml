@@ -1,0 +1,21 @@
+[package]
+name = "day5"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+indicatif = { version = "0.17.7", features = ["rayon"] }
+itertools = { workspace = true }
+nom = { workspace = true }
+rayon.workspace = true
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+divan = { workspace = true }
+
+[[bench]]
+name = "day5-bench"
+path = "benches/divan.rs"
+harness = false
