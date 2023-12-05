@@ -1,12 +1,26 @@
 use anyhow::{Context, Result};
+use nom::{
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::{self, alpha1, line_ending, space0, space1},
+    combinator::{map, recognize},
+    multi::{many1, separated_list1},
+    sequence::{pair, terminated, tuple},
+    IResult,
+};
+use tracing::info;
 
-#[tracing::instrument]
-fn process(_input: &'static str) -> Result<String> {
+#[tracing::instrument(skip(input))]
+fn process(input: &'static str) -> Result<String> {
+    info!("processing input");
+
     Ok("".to_string())
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(input))]
 pub fn part1(input: &'static str) -> Result<String> {
+    info!("part 1");
+
     process(input).context("process part 1")
 }
 
@@ -14,7 +28,7 @@ pub fn part1(input: &'static str) -> Result<String> {
 mod tests {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn it_works() {
         let input = r##""##;
         let result = process(input).unwrap();
