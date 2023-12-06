@@ -6,10 +6,10 @@ fn main() {
 
 #[divan::bench]
 fn part1_benchmark() {
-    part1(divan::black_box(include_str!("../input1.txt",))).unwrap();
+    part1(divan::black_box(include_str!("../input.txt",))).unwrap();
 }
 
 #[divan::bench]
 fn part2_benchmark() {
-    part2(divan::black_box(include_str!("../input2.txt",))).unwrap();
+    part2(divan::black_box(include_str!("../input.txt",))).unwrap();
 }
