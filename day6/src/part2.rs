@@ -6,7 +6,6 @@ use nom::{
     sequence::{pair, preceded, separated_pair},
     IResult,
 };
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use tracing::info;
 
 #[derive(Debug)]
@@ -60,14 +59,16 @@ fn process(input: &'static str) -> Result<String> {
 
     let (_, sheet) = sheet(input)?;
 
-    let time = sheet.time;
-    let distance = sheet.distance;
+    let time = sheet.time as f64;
+    let distance = sheet.distance as f64;
 
-    let result = (0..=time)
-        .into_par_iter()
-        .map(|n| n * (time - n))
-        .filter(|d| *d > distance)
-        .count();
+    let determinant = (time * time - 4.0 * distance).sqrt();
+    let max = (((time + determinant) / 2.0) - 1.0).ceil();
+    let min = ((time - determinant) / 2.0).floor();
+
+    info!(?time, ?distance, ?max, ?min);
+
+    let result = (max - min) as u32;
 
     info!(?result);
 

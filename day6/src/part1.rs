@@ -61,12 +61,22 @@ fn process(input: &'static str) -> Result<String> {
         .into_iter()
         .zip(sheet.distances)
         .map(|(time, distance)| {
-            (0..=time)
-                .map(|n| n * (time - n))
-                .filter(|d| *d > distance)
-                .count()
+            let time = time as f64;
+            let distance = distance as f64;
+
+            let determinant = (time * time - 4.0 * distance).sqrt();
+            let r1 = (time + determinant) / 2.0;
+            let r2 = (time - determinant) / 2.0;
+            let max = r1.max(r2).ceil();
+            let min = r1.min(r2).floor();
+
+            let max = max - 1.0;
+
+            info!(?time, ?distance, ?r1, ?r2, ?max, ?min);
+
+            (max - min) as u32
         })
-        .product::<usize>();
+        .product::<u32>();
 
     info!(?result);
 
