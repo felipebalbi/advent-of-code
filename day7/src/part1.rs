@@ -13,21 +13,20 @@ use tracing::info;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Card {
     Value(u32),
-    T,
-    J,
-    Q,
-    K,
-    A,
+    Jack,
+    Queen,
+    King,
+    Ace,
 }
 
 impl From<char> for Card {
     fn from(value: char) -> Self {
         match value {
-            'A' => Self::A,
-            'K' => Self::K,
-            'Q' => Self::Q,
-            'J' => Self::J,
-            'T' => Self::T,
+            'A' => Self::Ace,
+            'K' => Self::King,
+            'Q' => Self::Queen,
+            'J' => Self::Jack,
+            'T' => Self::Value(10),
             c if c.is_digit(10) => Self::Value(c.to_digit(10).expect("should be a number")),
             _ => unreachable!(),
         }

@@ -12,22 +12,21 @@ use tracing::info;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Card {
-    J,
+    Joker,
     Value(u32),
-    T,
-    Q,
-    K,
-    A,
+    Queen,
+    King,
+    Ace,
 }
 
 impl From<char> for Card {
     fn from(value: char) -> Self {
         match value {
-            'A' => Self::A,
-            'K' => Self::K,
-            'Q' => Self::Q,
-            'J' => Self::J,
-            'T' => Self::T,
+            'A' => Self::Ace,
+            'K' => Self::King,
+            'Q' => Self::Queen,
+            'J' => Self::Joker,
+            'T' => Self::Value(10),
             c if c.is_digit(10) => Self::Value(c.to_digit(10).expect("should be a number")),
             _ => unreachable!(),
         }
@@ -72,31 +71,31 @@ fn cards(input: &str) -> IResult<&str, RankedHand> {
                 acc
             });
 
-        if map.keys().contains(&Card::J) {
-            let jokers = map.get(&Card::J).expect("should have a joker").clone();
+        if map.keys().contains(&Card::Joker) {
+            let jokers = map.get(&Card::Joker).expect("should have a joker").clone();
 
             let mut best = map.iter().next_back().unwrap().clone();
 
             for (key, value) in map.iter() {
-                if value > best.1 && key != &Card::J {
+                if value > best.1 && key != &Card::Joker {
                     best = (key, value);
                 }
             }
 
-            if best.0 != &Card::J {
+            if best.0 != &Card::Joker {
                 map.entry(best.0.clone()).and_modify(|e| *e += jokers);
             }
         }
 
         let mut no_jokers = map
             .into_iter()
-            .filter(|(card, _)| card != &Card::J)
+            .filter(|(card, _)| card != &Card::Joker)
             .collect::<BTreeMap<Card, u32>>();
 
         // If we end up with an empty map, it can only mean we had a
         // hand of five jokers.
         if no_jokers.is_empty() {
-            no_jokers.insert(Card::J, 5);
+            no_jokers.insert(Card::Joker, 5);
         }
 
         let ranked_hand = match no_jokers.values().len() {
