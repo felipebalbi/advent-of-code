@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = { workspace = true }
+dhat = { workspace = true }
 itertools = { workspace = true }
 nom = { workspace = true }
 tracing = { workspace = true }
@@ -18,3 +19,6 @@ test-log = { workspace = true }
 name = "{{project-name}}-bench"
 path = "benches/divan.rs"
 harness = false
+
+[features]
+dhat-heap = []
