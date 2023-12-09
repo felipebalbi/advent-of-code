@@ -1,18 +1,20 @@
 use anyhow::{Context, Result};
+use itertools::Itertools;
 use nom::{
     character::complete::{self, line_ending, space1},
     multi::separated_list1,
     IResult,
 };
+use std::ops::Not;
 use tracing::info;
 
 #[tracing::instrument(skip(input))]
-fn history(input: &str) -> IResult<&str, Vec<i64>> {
-    separated_list1(space1, complete::i64)(input)
+fn history(input: &str) -> IResult<&str, Vec<i32>> {
+    separated_list1(space1, complete::i32)(input)
 }
 
 #[tracing::instrument(skip(input))]
-fn oasis(input: &str) -> IResult<&str, Vec<Vec<i64>>> {
+fn oasis(input: &str) -> IResult<&str, Vec<Vec<i32>>> {
     separated_list1(line_ending, history)(input)
 }
 
@@ -25,27 +27,21 @@ fn process(input: &'static str) -> Result<String> {
     info!(?oasis);
 
     let result = oasis
-        .iter()
+        .into_iter()
         .map(|history| {
-            let mut grid = vec![history.clone()];
-
-            while !grid.last().unwrap().iter().all(|n| *n == 0) {
-                let step = grid
-                    .last()
-                    .unwrap()
-                    .windows(2)
-                    .map(|w| {
-                        info!(?w);
-
-                        w[1] - w[0]
-                    })
-                    .collect::<Vec<_>>();
-                grid.push(step);
-            }
-
-            grid.iter().map(|ns| ns.last().unwrap()).rev().sum::<i64>()
+            std::iter::successors(Some(history), |measurements| {
+                measurements.iter().all(|num| num == &0).not().then_some(
+                    measurements
+                        .iter()
+                        .tuple_windows::<(&i32, &i32)>()
+                        .map(|(left, right)| right - left)
+                        .collect(),
+                )
+            })
+            .map(|v| *v.last().unwrap())
+            .sum::<i32>()
         })
-        .sum::<i64>();
+        .sum::<i32>();
 
     Ok(result.to_string())
 }
