@@ -1,0 +1,25 @@
+[package]
+name = "day10"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+dhat = { workspace = true }
+itertools = { workspace = true }
+nom = { workspace = true }
+petgraph = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+divan = { workspace = true }
+test-log = { workspace = true }
+
+[[bench]]
+name = "day10-bench"
+path = "benches/divan.rs"
+harness = false
+
+[features]
+dhat-heap = []
