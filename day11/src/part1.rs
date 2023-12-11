@@ -54,14 +54,11 @@ fn galaxies(input: Span) -> IResult<Span, Vec<Vec<Value>>> {
 }
 
 #[tracing::instrument(skip(v))]
-fn transpose<T>(v: &Vec<Vec<T>>) -> Vec<Vec<T>>
-where
-    T: Clone,
-{
+fn transpose<T>(v: &Vec<Vec<T>>) -> Vec<Vec<&T>> {
     assert!(!v.is_empty());
 
     (0..v[0].len())
-        .map(|i| v.iter().map(|inner| inner[i].clone()).collect::<Vec<T>>())
+        .map(|i| v.iter().map(|inner| &inner[i]).collect::<Vec<&T>>())
         .collect()
 }
 
@@ -73,7 +70,6 @@ fn process(input: &'static str) -> Result<String> {
 
     let empty_rows = galaxies
         .iter()
-        .cloned()
         .filter(|row| {
             row.iter().all(|value| match value {
                 Value::Empty(_) => true,
@@ -94,7 +90,6 @@ fn process(input: &'static str) -> Result<String> {
     let transposed = transpose(&galaxies);
     let empty_cols = transposed
         .iter()
-        .cloned()
         .filter(|col| {
             col.iter().all(|value| match value {
                 Value::Empty(_) => true,

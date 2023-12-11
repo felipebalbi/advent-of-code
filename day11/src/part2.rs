@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use glam::{I64Vec2, IVec2};
+use glam::IVec2;
 use itertools::Itertools;
 use nom::{
     branch::alt,
@@ -12,7 +12,7 @@ use nom_locate::LocatedSpan;
 use tracing::info;
 
 type Span<'a> = LocatedSpan<&'a str>;
-type SpanCoord<'a> = LocatedSpan<&'a str, I64Vec2>;
+type SpanCoord<'a> = LocatedSpan<&'a str, IVec2>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 enum Value<'a> {
@@ -21,19 +21,19 @@ enum Value<'a> {
 }
 
 impl<'a> Value<'a> {
-    fn coordinates(&self) -> I64Vec2 {
+    fn coordinates(&self) -> IVec2 {
         match self {
             Value::Galaxy(coord) => coord.extra,
-            _ => I64Vec2::new(0, 0),
+            _ => IVec2::new(0, 0),
         }
     }
 }
 
 #[tracing::instrument(skip(input))]
 fn coordinate(input: Span) -> SpanCoord {
-    let x = input.get_column() as i64 - 1;
-    let y = input.location_line() as i64 - 1;
-    input.map_extra(|_| I64Vec2::new(x, y))
+    let x = input.get_column() as i32 - 1;
+    let y = input.location_line() as i32 - 1;
+    input.map_extra(|_| IVec2::new(x, y))
 }
 
 #[tracing::instrument(skip(input))]
@@ -54,14 +54,11 @@ fn galaxies(input: Span) -> IResult<Span, Vec<Vec<Value>>> {
 }
 
 #[tracing::instrument(skip(v))]
-fn transpose<T>(v: &Vec<Vec<T>>) -> Vec<Vec<T>>
-where
-    T: Clone,
-{
+fn transpose<T>(v: &Vec<Vec<T>>) -> Vec<Vec<&T>> {
     assert!(!v.is_empty());
 
     (0..v[0].len())
-        .map(|i| v.iter().map(|inner| inner[i].clone()).collect::<Vec<T>>())
+        .map(|i| v.iter().map(|inner| &inner[i]).collect::<Vec<&T>>())
         .collect()
 }
 
@@ -73,7 +70,6 @@ fn process(input: &'static str) -> Result<String> {
 
     let empty_rows = galaxies
         .iter()
-        .cloned()
         .filter(|row| {
             row.iter().all(|value| match value {
                 Value::Empty(_) => true,
@@ -94,7 +90,6 @@ fn process(input: &'static str) -> Result<String> {
     let transposed = transpose(&galaxies);
     let empty_cols = transposed
         .iter()
-        .cloned()
         .filter(|col| {
             col.iter().all(|value| match value {
                 Value::Empty(_) => true,
@@ -126,25 +121,25 @@ fn process(input: &'static str) -> Result<String> {
 
             for empty_col in empty_cols.iter() {
                 if a.coordinates().x > *empty_col {
-                    coord1 += I64Vec2::new(1_000_000 - 1, 0);
+                    coord1 += IVec2::new(1_000_000 - 1, 0);
                 }
 
                 if b.coordinates().x > *empty_col {
-                    coord2 += I64Vec2::new(1_000_000 - 1, 0);
+                    coord2 += IVec2::new(1_000_000 - 1, 0);
                 }
             }
 
             for empty_row in empty_rows.iter() {
                 if a.coordinates().y > *empty_row {
-                    coord1 += I64Vec2::new(0, 1_000_000 - 1);
+                    coord1 += IVec2::new(0, 1_000_000 - 1);
                 }
 
                 if b.coordinates().y > *empty_row {
-                    coord2 += I64Vec2::new(0, 1_000_000 - 1);
+                    coord2 += IVec2::new(0, 1_000_000 - 1);
                 }
             }
 
-            (coord1.x - coord2.x).abs() + (coord1.y - coord2.y).abs()
+            ((coord1.x - coord2.x).abs() + (coord1.y - coord2.y).abs()) as i64
         })
         .collect::<Vec<_>>();
 
