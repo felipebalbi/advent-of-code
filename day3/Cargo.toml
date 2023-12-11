@@ -5,9 +5,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = { workspace = true }
-glam = "0.24.2"
+glam = { workspace = true }
 itertools.workspace = true
 nom = { workspace = true }
-nom_locate = "4.2.0"
+nom_locate = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
