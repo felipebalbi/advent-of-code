@@ -25,15 +25,13 @@ struct Row {
 }
 
 impl Row {
-    fn permute(&self) -> Vec<Vec<Condition>> {
+    fn permute(&self) -> impl Iterator<Item = Vec<Condition>> {
         let unknowns = self
             .conditions
-            .iter()
+            .par_iter()
             .filter(|condition| *condition == &Condition::Unknown)
             .count();
-        repeat_n([Condition::Operational, Condition::Damaged], unknowns)
-            .multi_cartesian_product()
-            .collect::<Vec<_>>()
+        repeat_n([Condition::Operational, Condition::Damaged], unknowns).multi_cartesian_product()
     }
 
     fn is_valid(&self, permutation: &Vec<Condition>) -> bool {
@@ -94,7 +92,6 @@ fn process(input: &'static str) -> Result<String> {
         .par_iter()
         .map(|row| {
             row.permute()
-                .iter()
                 .filter(|permutation| row.is_valid(permutation))
                 .count()
         })
