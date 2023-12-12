@@ -34,10 +34,10 @@ impl Row {
         repeat_n([Condition::Operational, Condition::Damaged], unknowns).multi_cartesian_product()
     }
 
-    fn is_valid(&self, permutation: &Vec<Condition>) -> bool {
+    fn is_valid(&self, permutation: &[Condition]) -> bool {
         let mut it = permutation.iter();
-        let groups = self
-            .conditions
+
+        self.conditions
             .iter()
             .map(|condition| match condition {
                 Condition::Unknown => it.next().expect("should have a valid permutation"),
@@ -45,12 +45,8 @@ impl Row {
             })
             .group_by(|condition| *condition == &Condition::Damaged)
             .into_iter()
-            .filter_map(|(is_damaged, group)| {
-                is_damaged.then_some(group.into_iter().count() as u32)
-            })
-            .collect::<Vec<u32>>();
-
-        &self.groups[..] == &groups[..]
+            .filter_map(|(is_damaged, group)| is_damaged.then_some(group.count() as u32))
+            .eq(self.groups.iter().copied())
     }
 }
 
