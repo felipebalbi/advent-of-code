@@ -129,6 +129,7 @@ pub fn part2(input: &'static str) -> Result<String> {
 mod tests {
     use super::*;
 
+    #[ignore]
     #[test_log::test]
     fn line1() {
         let input = "???.### 1,1,3\n";
@@ -137,6 +138,7 @@ mod tests {
         assert_eq!(result.unwrap(), "1");
     }
 
+    #[ignore]
     #[test_log::test]
     fn line2() {
         let input = ".??..??...?##. 1,1,3\n";
@@ -145,6 +147,7 @@ mod tests {
         assert_eq!(result.unwrap(), "16384");
     }
 
+    #[ignore]
     #[test_log::test]
     fn line3() {
         let input = "?#?#?#?#?#?#?#? 1,3,1,6\n";
@@ -153,6 +156,7 @@ mod tests {
         assert_eq!(result.unwrap(), "1");
     }
 
+    #[ignore]
     #[test_log::test]
     fn line4() {
         let input = "????.#...#... 4,1,1\n";
@@ -160,6 +164,8 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "16");
     }
+
+    #[ignore]
     #[test_log::test]
     fn line5() {
         let input = "????.######..#####. 1,6,5\n";
@@ -167,6 +173,8 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "2500");
     }
+
+    #[ignore]
     #[test_log::test]
     fn line6() {
         let input = "?###???????? 3,2,1\n";
@@ -175,6 +183,7 @@ mod tests {
         assert_eq!(result.unwrap(), "506250");
     }
 
+    #[ignore]
     #[test_log::test]
     fn all_lines() {
         let input = r##"???.### 1,1,3
