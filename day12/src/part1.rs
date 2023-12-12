@@ -1,14 +1,14 @@
 use anyhow::{Context, Result};
-use itertools::Itertools;
+use itertools::{repeat_n, Itertools};
 use nom::{
-    branch::alt,
     bytes::complete::tag,
-    character::complete::{self, alpha1, line_ending, one_of, space0, space1},
-    combinator::{map, recognize},
+    character::complete::{self, line_ending, one_of, space1},
+    combinator::map,
     multi::{many1, separated_list1},
-    sequence::{pair, separated_pair, terminated, tuple},
+    sequence::separated_pair,
     IResult,
 };
+use rayon::prelude::*;
 use tracing::info;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -22,6 +22,38 @@ enum Condition {
 struct Row {
     conditions: Vec<Condition>,
     groups: Vec<u32>,
+}
+
+impl Row {
+    fn permute(&self) -> Vec<Vec<Condition>> {
+        let unknowns = self
+            .conditions
+            .iter()
+            .filter(|condition| *condition == &Condition::Unknown)
+            .count();
+        repeat_n([Condition::Operational, Condition::Damaged], unknowns)
+            .multi_cartesian_product()
+            .collect::<Vec<_>>()
+    }
+
+    fn is_valid(&self, permutation: &Vec<Condition>) -> bool {
+        let mut it = permutation.iter();
+        let groups = self
+            .conditions
+            .iter()
+            .map(|condition| match condition {
+                Condition::Unknown => it.next().expect("should have a valid permutation"),
+                c => c,
+            })
+            .group_by(|condition| *condition == &Condition::Damaged)
+            .into_iter()
+            .filter_map(|(is_damaged, group)| {
+                is_damaged.then_some(group.into_iter().count() as u32)
+            })
+            .collect::<Vec<u32>>();
+
+        &self.groups[..] == &groups[..]
+    }
 }
 
 #[tracing::instrument(skip(input))]
@@ -58,9 +90,15 @@ fn process(input: &'static str) -> Result<String> {
 
     let (_, records) = records(input)?;
 
-    info!(?records);
-
-    let result = 0;
+    let result = records
+        .par_iter()
+        .map(|row| {
+            row.permute()
+                .iter()
+                .filter(|permutation| row.is_valid(permutation))
+                .count()
+        })
+        .sum::<usize>();
 
     Ok(result.to_string())
 }
@@ -92,7 +130,6 @@ mod tests {
         assert_eq!(result.unwrap(), "4");
     }
 
-    #[ignore]
     #[test_log::test]
     fn ten_arrangements() {
         let input = "?###???????? 3,2,1\n";
@@ -101,7 +138,6 @@ mod tests {
         assert_eq!(result.unwrap(), "10");
     }
 
-    #[ignore]
     #[test_log::test]
     fn twenty_one_arrangements() {
         let input = r##"???.### 1,1,3
