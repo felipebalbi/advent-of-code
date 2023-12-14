@@ -6,6 +6,7 @@ members = [
 
 [workspace.dependencies]
 anyhow = "1.0.75"
+cached = "0.46.1"
 dhat = "0.3.2"
 divan = "0.1.4"
 glam = "0.24.2"
