@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = { workspace = true }
-cached = { workspace = true }
 dhat = { workspace = true }
 glam = { workspace = true }
 itertools = { workspace = true }

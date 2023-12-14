@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use cached::{proc_macro::cached, TimedSizedCache};
 use nom::{
     character::complete::{line_ending, one_of},
     combinator::map,
@@ -9,14 +8,14 @@ use nom::{
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use tracing::info;
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(Debug, Hash, PartialEq, Clone)]
 enum Rock {
     Round,
     Cube,
     Empty,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(Debug, Hash, PartialEq, Clone)]
 struct Reflector {
     rocks: Vec<Vec<Rock>>,
 }
@@ -196,10 +195,6 @@ fn reflector(input: &str) -> IResult<&str, Reflector> {
     })(input)
 }
 
-#[cached(
-    type = "TimedSizedCache<Reflector, Reflector>",
-    create = "{ TimedSizedCache::with_size_and_lifespan(3*1024*1024*1024, 120) }"
-)]
 fn cycle(reflector: Reflector) -> Reflector {
     reflector
         .tilt(Direction::North)
@@ -208,50 +203,25 @@ fn cycle(reflector: Reflector) -> Reflector {
         .tilt(Direction::East)
 }
 
-fn rocks_equal(a: &Reflector, b: &Reflector) -> bool {
-    for i in 0..a.rocks.len() {
-        for j in 0..a.rocks[0].len() {
-            if a.rocks[i][j] != b.rocks[i][j] {
-                return false;
-            }
-        }
-    }
-
-    true
-}
-
 #[tracing::instrument(skip(input))]
 fn process(input: &'static str) -> Result<String> {
     info!("processing input");
 
     let (_, mut reflector) = reflector(input)?;
 
-    let mut cycle_length = 1;
-    let start = cycle(reflector.clone());
+    let mut history = vec![];
 
-    reflector = cycle(reflector);
+    let Some(cycle_start) = (0..1_000_000_000).find_map(|_| {
+        history.push(reflector.clone());
+        reflector = cycle(reflector.clone());
+        history.par_iter().position_any(|prev| *prev == reflector)
+    }) else {
+        return Ok(reflector.compute_load().to_string());
+    };
 
-    loop {
-        reflector = cycle(reflector);
-        cycle_length += 1;
-
-        info!(?cycle_length);
-        // info!(?cycle_length, ?reflector, ?start);
-
-        if rocks_equal(&reflector, &start) {
-            break;
-        }
-    }
-
-    let iterations = 1_000_000_000 % cycle_length;
-
-    info!(?iterations);
-
-    for _ in 0..iterations {
-        reflector = cycle(reflector);
-    }
-
-    let result = reflector.compute_load();
+    let cycle_length = history.len() - cycle_start;
+    let solution_index = cycle_start + ((1_000_000_000 - cycle_start) % cycle_length);
+    let result = history[solution_index].clone().compute_load();
 
     Ok(result.to_string())
 }
@@ -266,18 +236,6 @@ pub fn part2(input: &'static str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // #[test_log::test]
-    // fn simple() {
-    //     let input = r##".....
-    // .....
-    // ..O..
-    // .....
-    // .....
-    // "##;
-    //     let result = process(input).unwrap();
-    //     assert_eq!(result, "0");
-    // }
 
     #[test_log::test]
     fn it_works() {
