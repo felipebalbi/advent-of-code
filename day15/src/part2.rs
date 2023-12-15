@@ -73,42 +73,45 @@ fn process(input: &'static str) -> Result<String> {
 
     let (_, instructions) = instructions(input)?;
 
-    let mut boxes = BTreeMap::<u8, Vec<Lens>>::new();
-
-    for instruction in instructions.iter() {
-        match instruction.operation {
-            Operation::Pop => {
-                if let Some(contents) = boxes.get_mut(&instruction.hash) {
-                    if let Some(index) = contents
-                        .iter()
-                        .position(|lens| lens.label == instruction.label)
-                    {
-                        contents.remove(index);
-                    }
-                }
-            }
-            Operation::Push(focal_length) => {
-                let lens = Lens {
-                    label: instruction.label,
-                    focal_length,
-                };
-
-                boxes
-                    .entry(instruction.hash)
-                    .and_modify(|entry| {
-                        if let Some(index) = entry
+    let boxes = instructions.iter().fold(
+        BTreeMap::<u8, Vec<Lens>>::new(),
+        |mut boxes, instruction| {
+            match instruction.operation {
+                Operation::Pop => {
+                    if let Some(contents) = boxes.get_mut(&instruction.hash) {
+                        if let Some(index) = contents
                             .iter()
                             .position(|lens| lens.label == instruction.label)
                         {
-                            entry[index] = lens.clone();
-                        } else {
-                            (*entry).push(lens.clone());
+                            contents.remove(index);
                         }
-                    })
-                    .or_insert(vec![lens]);
+                    }
+                }
+                Operation::Push(focal_length) => {
+                    let lens = Lens {
+                        label: instruction.label,
+                        focal_length,
+                    };
+
+                    boxes
+                        .entry(instruction.hash)
+                        .and_modify(|entry| {
+                            if let Some(index) = entry
+                                .iter()
+                                .position(|lens| lens.label == instruction.label)
+                            {
+                                entry[index] = lens.clone();
+                            } else {
+                                (*entry).push(lens.clone());
+                            }
+                        })
+                        .or_insert(vec![lens]);
+                }
             }
-        }
-    }
+
+            boxes
+        },
+    );
 
     let result = boxes.iter().fold(0, |acc, (index, box_map)| {
         acc + box_map.iter().enumerate().fold(0, |box_acc, (slot, lens)| {
