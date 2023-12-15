@@ -50,7 +50,7 @@ fn instruction(input: &str) -> IResult<&str, Instruction> {
     map(pair(label, operation), |(label, operation)| {
         let hash: u8 = label
             .chars()
-            .fold(0, |acc, c| (acc + (c as usize * 17)) % 256)
+            .fold(0, |acc, c| ((acc + c as usize) * 17) % 256)
             .try_into()
             .expect("should fit into a u8");
 

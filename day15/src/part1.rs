@@ -10,7 +10,7 @@ fn process(input: &'static str) -> Result<String> {
         .map(|inst| {
             inst.chars()
                 .filter(|c| c != &'\n')
-                .fold(0, |acc, c| acc + (c as usize * 17) % 256)
+                .fold(0, |acc, c| ((acc + c as usize) * 17) % 256)
         })
         .sum::<usize>();
 
