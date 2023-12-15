@@ -8,13 +8,9 @@ fn process(input: &'static str) -> Result<String> {
     let result = input
         .split(",")
         .map(|inst| {
-            inst.chars().filter(|c| c != &'\n').fold(0, |mut acc, c| {
-                acc += c as u8 as usize;
-                acc *= 17;
-                acc %= 256;
-
-                acc
-            })
+            inst.chars()
+                .filter(|c| c != &'\n')
+                .fold(0, |acc, c| acc + (c as usize * 17) % 256)
         })
         .sum::<usize>();
 
