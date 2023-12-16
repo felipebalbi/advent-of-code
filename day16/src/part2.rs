@@ -1,4 +1,6 @@
 use anyhow::{Context, Result};
+use glam::IVec2;
+use rayon::prelude::*;
 use std::collections::{HashSet, VecDeque};
 use tracing::info;
 
@@ -13,241 +15,260 @@ enum Direction {
 #[derive(Debug)]
 struct Ray {
     direction: Direction,
-    x: isize,
-    y: isize,
+    position: IVec2,
+    next_position: VecDeque<(IVec2, Direction)>,
+    path: HashSet<(IVec2, Direction)>,
+    energized: HashSet<IVec2>,
 }
 
 impl Ray {
-    fn reflect(&self, mirror: char) -> Direction {
-        match mirror {
-            '/' => match self.direction {
-                Direction::Up => Direction::Right,
-                Direction::Down => Direction::Left,
-                Direction::Right => Direction::Up,
-                Direction::Left => Direction::Down,
+    fn new(position: IVec2, direction: Direction) -> Self {
+        let next_position = (position, direction);
+
+        let mut ray = Ray {
+            direction,
+            position,
+            next_position: VecDeque::new(),
+            path: HashSet::new(),
+            energized: HashSet::new(),
+        };
+
+        ray.next_position.push_back(next_position);
+
+        ray
+    }
+
+    fn calculate_next_positions(&mut self, grid: &[u8], width: usize, height: usize) {
+        let (position, direction) = self
+            .next_position
+            .pop_back()
+            .expect("should have next position");
+
+        self.position = position;
+        self.direction = direction;
+
+        let tile = grid[self.grid_position(width)];
+
+        // energize current tile
+        self.energized.insert(self.position);
+
+        // add current tile to my path
+        self.path.insert((self.position, self.direction));
+
+        // add next position to the queue
+        match tile {
+            // Empty
+            b'.' => self.follow_empty(width as isize, height as isize),
+
+            // Mirrors
+            b'/' | b'\\' => self.follow_mirror(tile, width as isize, height as isize),
+
+            // Splitters
+            b'-' | b'|' => self.follow_splitter(tile, width as isize, height as isize),
+
+            // ignore anything else
+            _ => {}
+        }
+    }
+
+    fn append_next_position(
+        &mut self,
+        position: IVec2,
+        direction: Direction,
+        width: isize,
+        height: isize,
+    ) {
+        if self.is_within_bounds(position, width, height)
+            && !self.path.contains(&(position, direction))
+        {
+            self.next_position.push_back((position, direction));
+        }
+    }
+
+    fn follow_empty(&mut self, width: isize, height: isize) {
+        match self.direction {
+            Direction::Up => self.append_next_position(
+                self.position + IVec2::new(0, -1),
+                Direction::Up,
+                width,
+                height,
+            ),
+            Direction::Down => self.append_next_position(
+                self.position + IVec2::new(0, 1),
+                Direction::Down,
+                width,
+                height,
+            ),
+            Direction::Left => self.append_next_position(
+                self.position + IVec2::new(-1, 0),
+                Direction::Left,
+                width,
+                height,
+            ),
+            Direction::Right => self.append_next_position(
+                self.position + IVec2::new(1, 0),
+                Direction::Right,
+                width,
+                height,
+            ),
+        }
+    }
+
+    fn follow_splitter(&mut self, tile: u8, width: isize, height: isize) {
+        match tile {
+            b'|' => match self.direction {
+                Direction::Left | Direction::Right => {
+                    self.append_next_position(
+                        self.position + IVec2::new(0, -1),
+                        Direction::Up,
+                        width,
+                        height,
+                    );
+                    self.append_next_position(
+                        self.position + IVec2::new(0, 1),
+                        Direction::Down,
+                        width,
+                        height,
+                    );
+                }
+                _ => self.follow_empty(width, height),
             },
-            '\\' => match self.direction {
-                Direction::Up => Direction::Left,
-                Direction::Down => Direction::Right,
-                Direction::Right => Direction::Down,
-                Direction::Left => Direction::Up,
+            b'-' => match self.direction {
+                Direction::Up | Direction::Down => {
+                    self.append_next_position(
+                        self.position + IVec2::new(-1, 0),
+                        Direction::Left,
+                        width,
+                        height,
+                    );
+                    self.append_next_position(
+                        self.position + IVec2::new(1, 0),
+                        Direction::Right,
+                        width,
+                        height,
+                    );
+                }
+                _ => self.follow_empty(width, height),
             },
             _ => unreachable!(),
         }
     }
+
+    fn follow_mirror(&mut self, tile: u8, width: isize, height: isize) {
+        match tile {
+            b'/' => match self.direction {
+                Direction::Up => self.append_next_position(
+                    self.position + IVec2::new(1, 0),
+                    Direction::Right,
+                    width,
+                    height,
+                ),
+                Direction::Down => self.append_next_position(
+                    self.position + IVec2::new(-1, 0),
+                    Direction::Left,
+                    width,
+                    height,
+                ),
+                Direction::Left => self.append_next_position(
+                    self.position + IVec2::new(0, 1),
+                    Direction::Down,
+                    width,
+                    height,
+                ),
+                Direction::Right => self.append_next_position(
+                    self.position + IVec2::new(0, -1),
+                    Direction::Up,
+                    width,
+                    height,
+                ),
+            },
+            b'\\' => match self.direction {
+                Direction::Up => self.append_next_position(
+                    self.position + IVec2::new(-1, 0),
+                    Direction::Left,
+                    width,
+                    height,
+                ),
+                Direction::Down => self.append_next_position(
+                    self.position + IVec2::new(1, 0),
+                    Direction::Right,
+                    width,
+                    height,
+                ),
+                Direction::Left => self.append_next_position(
+                    self.position + IVec2::new(0, -1),
+                    Direction::Up,
+                    width,
+                    height,
+                ),
+                Direction::Right => self.append_next_position(
+                    self.position + IVec2::new(0, 1),
+                    Direction::Down,
+                    width,
+                    height,
+                ),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn keep_following(&self) -> bool {
+        !self.next_position.is_empty()
+    }
+
+    fn grid_position(&self, width: usize) -> usize {
+        (self.position.y as usize) * width + self.position.x as usize
+    }
+
+    fn is_within_bounds(&self, position: IVec2, width: isize, height: isize) -> bool {
+        position.x >= 0
+            && position.x < (width as i32) - 1 // ignore \n at the end of each line
+            && position.y >= 0
+            && position.y < (height as i32)
+    }
 }
 
-fn out_of_bounds(grid: &Vec<Vec<char>>, pos: &(isize, isize)) -> bool {
-    pos.0 < 0 || pos.0 >= (grid[0].len() as isize) || pos.1 < 0 || pos.1 >= (grid.len() as isize)
+#[tracing::instrument]
+fn starting_rays(width: usize, height: usize) -> impl ParallelIterator<Item = Ray> {
+    let top_row = (0..width)
+        .into_par_iter()
+        .map(move |x| Ray::new(IVec2::new(x as i32, 0), Direction::Down));
+    let bottom_row = (0..width)
+        .into_par_iter()
+        .map(move |x| Ray::new(IVec2::new(x as i32, (height - 1) as i32), Direction::Up));
+    let left_column = (0..height)
+        .into_par_iter()
+        .map(move |y| Ray::new(IVec2::new(0, y as i32), Direction::Right));
+    let right_column = (0..height)
+        .into_par_iter()
+        .map(move |y| Ray::new(IVec2::new((width - 1) as i32, y as i32), Direction::Left));
+
+    top_row
+        .chain(bottom_row)
+        .chain(left_column)
+        .chain(right_column)
 }
 
 #[tracing::instrument(skip(input))]
 fn process(input: &'static str) -> Result<String> {
     info!("processing input");
 
-    let grid = input
-        .lines()
-        .map(|line| line.chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>();
-    let mut next_position = VecDeque::<Ray>::new();
+    let width = input.find('\n').expect("should have a newline") + 1;
+    let height = input.len() / width;
+    let grid = input.as_bytes();
 
-    // Starts at position 0 going Right
-    next_position.push_back(Ray {
-        direction: Direction::Down,
-        x: 3,
-        y: 0,
-    });
-
-    let mut visited = HashSet::<(isize, isize, Direction)>::new();
-    visited.insert((3, 0, Direction::Down));
-
-    while !next_position.is_empty() {
-        let ray = next_position.pop_front().expect("should have a ray");
-
-        let c = grid[ray.y as usize][ray.x as usize];
-
-        match c {
-            '.' => {
-                let (x, y) = match ray.direction {
-                    Direction::Right => (ray.x + 1, ray.y),
-                    Direction::Left => (ray.x - 1, ray.y),
-                    Direction::Down => (ray.x, ray.y + 1),
-                    Direction::Up => (ray.x, ray.y - 1),
-                };
-
-                if !visited.contains(&(x, y, ray.direction)) && !out_of_bounds(&grid, &(x, y)) {
-                    visited.insert((x, y, ray.direction));
-
-                    next_position.push_back(Ray {
-                        direction: ray.direction,
-                        x,
-                        y,
-                    });
-                }
+    let result = starting_rays(width - 1, height)
+        .map(|mut ray| {
+            while ray.keep_following() {
+                ray.calculate_next_positions(grid, width, height);
             }
-            '\\' => {
-                let (x, y) = match ray.direction {
-                    Direction::Up => (ray.x - 1, ray.y),
-                    Direction::Down => (ray.x + 1, ray.y),
-                    Direction::Left => (ray.x, ray.y - 1),
-                    Direction::Right => (ray.x, ray.y + 1),
-                };
 
-                if !visited.contains(&(x, y, ray.reflect(c))) && !out_of_bounds(&grid, &(x, y)) {
-                    visited.insert((x, y, ray.reflect(c)));
+            ray.energized.len()
+        })
+        .max()
+        .expect("should have a maximum");
 
-                    next_position.push_back(Ray {
-                        direction: ray.reflect(c),
-                        x,
-                        y,
-                    });
-                }
-            }
-            '/' => {
-                let (x, y) = match ray.direction {
-                    Direction::Up => (ray.x + 1, ray.y),
-                    Direction::Down => (ray.x - 1, ray.y),
-                    Direction::Left => (ray.x, ray.y + 1),
-                    Direction::Right => (ray.x, ray.y - 1),
-                };
-
-                if !visited.contains(&(x, y, ray.reflect(c))) && !out_of_bounds(&grid, &(x, y)) {
-                    visited.insert((x, y, ray.reflect(c)));
-
-                    next_position.push_back(Ray {
-                        direction: ray.reflect(c),
-                        x,
-                        y,
-                    });
-                }
-            }
-            '-' => match ray.direction {
-                Direction::Right => {
-                    let (x, y) = (ray.x + 1, ray.y);
-
-                    if !visited.contains(&(x, y, ray.direction)) && !out_of_bounds(&grid, &(x, y)) {
-                        visited.insert((x, y, ray.direction));
-
-                        next_position.push_back(Ray {
-                            direction: ray.direction,
-                            x,
-                            y,
-                        });
-                    }
-                }
-                Direction::Left => {
-                    let (x, y) = (ray.x - 1, ray.y);
-
-                    if !visited.contains(&(x, y, ray.direction)) && !out_of_bounds(&grid, &(x, y)) {
-                        visited.insert((x, y, ray.direction));
-
-                        next_position.push_back(Ray {
-                            direction: ray.direction,
-                            x,
-                            y,
-                        });
-                    }
-                }
-                Direction::Up | Direction::Down => {
-                    let (x, y) = (ray.x - 1, ray.y);
-
-                    if !visited.contains(&(x, y, Direction::Left)) && !out_of_bounds(&grid, &(x, y))
-                    {
-                        visited.insert((x, y, Direction::Left));
-
-                        next_position.push_back(Ray {
-                            direction: Direction::Left,
-                            x,
-                            y,
-                        });
-                    }
-
-                    let (x, y) = (ray.x + 1, ray.y);
-
-                    if !visited.contains(&(x, y, Direction::Right))
-                        && !out_of_bounds(&grid, &(x, y))
-                    {
-                        visited.insert((x, y, Direction::Right));
-
-                        next_position.push_back(Ray {
-                            direction: Direction::Right,
-                            x,
-                            y,
-                        });
-                    }
-                }
-            },
-            '|' => match ray.direction {
-                Direction::Down => {
-                    let (x, y) = (ray.x, ray.y + 1);
-
-                    if !visited.contains(&(x, y, ray.direction)) && !out_of_bounds(&grid, &(x, y)) {
-                        visited.insert((x, y, ray.direction));
-
-                        next_position.push_back(Ray {
-                            direction: ray.direction,
-                            x,
-                            y,
-                        });
-                    }
-                }
-                Direction::Up => {
-                    let (x, y) = (ray.x, ray.y - 1);
-
-                    if !visited.contains(&(x, y, ray.direction)) {
-                        visited.insert((x, y, ray.direction));
-
-                        next_position.push_back(Ray {
-                            direction: ray.direction,
-                            x,
-                            y,
-                        });
-                    }
-                }
-                Direction::Right | Direction::Left => {
-                    let (x, y) = (ray.x, ray.y - 1);
-
-                    if !visited.contains(&(x, y, Direction::Up)) && !out_of_bounds(&grid, &(x, y)) {
-                        visited.insert((x, y, Direction::Up));
-
-                        next_position.push_back(Ray {
-                            direction: Direction::Up,
-                            x,
-                            y,
-                        });
-                    }
-
-                    let (x, y) = (ray.x, ray.y + 1);
-
-                    if !visited.contains(&(x, y, Direction::Down)) && !out_of_bounds(&grid, &(x, y))
-                    {
-                        visited.insert((x, y, Direction::Down));
-
-                        next_position.push_back(Ray {
-                            direction: Direction::Down,
-                            x,
-                            y,
-                        });
-                    }
-                }
-            },
-            '\n' => {}
-            _ => unreachable!(),
-        }
-
-        // info!(
-        //     "ray={:?}, c={:?}, next_position={:?}",
-        //     ray, c as char, next_position
-        // );
-    }
-
-    let energized_count = visited
-        .iter()
-        .map(|(x, y, _)| (x, y))
-        .collect::<HashSet<(&isize, &isize)>>()
-        .len();
-
-    Ok(energized_count.to_string())
+    Ok(result.to_string())
 }
 
 #[tracing::instrument(skip(input))]
