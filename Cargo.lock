@@ -285,6 +285,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "day16"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dhat",
+ "divan",
+ "glam",
+ "itertools",
+ "nom",
+ "nom_locate",
+ "petgraph",
+ "rayon",
+ "test-log",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "day2"
 version = "0.1.0"
 dependencies = [
