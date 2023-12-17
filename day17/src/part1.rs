@@ -20,30 +20,33 @@ fn process(input: &'static str) -> Result<String> {
     let path = dijkstra(
         &((0, 0), directions::E, 0),
         |&(pos, step_direction, same_direction_count)| {
-            let mut neighbors = Vec::new();
+            directions::DIRECTIONS_4
+                .into_iter()
+                .filter_map(|direction| {
+                    grid.move_in_direction(pos, direction)
+                        .map(|neighbor_position| {
+                            let cost = *grid.get(neighbor_position).unwrap() as usize;
 
-            for direction in vec![directions::N, directions::S, directions::E, directions::W] {
-                if let Some(neighbor_position) = grid.move_in_direction(pos, direction) {
-                    let cost = *grid.get(neighbor_position).unwrap() as usize;
+                            info!(?direction, ?step_direction);
 
-                    info!(?direction, ?step_direction);
-
-                    if direction != (step_direction.0 * -1, step_direction.1 * -1)
-                        && direction != step_direction
-                    {
-                        // changing direction, reset same direction count to 1
-                        neighbors.push(((neighbor_position, direction, 1), cost));
-                    } else if same_direction_count < 3 && direction == step_direction {
-                        // same direction, increment same direction count
-                        neighbors.push((
-                            (neighbor_position, direction, same_direction_count + 1),
-                            cost,
-                        ));
-                    }
-                }
-            }
-
-            neighbors
+                            if direction != (step_direction.0 * -1, step_direction.1 * -1)
+                                && direction != step_direction
+                            {
+                                // changing direction, reset same direction count to 1
+                                ((neighbor_position, direction, 1), cost)
+                            } else if same_direction_count < 3 && direction == step_direction {
+                                // same direction, increment same direction count
+                                (
+                                    (neighbor_position, direction, same_direction_count + 1),
+                                    cost,
+                                )
+                            } else {
+                                // Add a node that we will never follow
+                                ((neighbor_position, direction, 3), 420)
+                            }
+                        })
+                })
+                .collect::<Vec<_>>()
         },
         |&(pos, _, _)| pos == (grid.rows - 1, grid.columns - 1),
     )
