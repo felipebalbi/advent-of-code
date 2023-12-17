@@ -259,7 +259,7 @@ mod tests {
 
     #[test_log::test]
     fn it_works() {
-        let input = r##".|...\....
+        let input = r".|...\....
 |.-.\.....
 .....|-...
 ........|.
@@ -269,7 +269,7 @@ mod tests {
 .-.-/..|..
 .|....-|.\
 ..//.|....
-"##;
+";
         let result = process(input).unwrap();
         assert_eq!(result, "46");
     }

@@ -33,10 +33,10 @@ fn schematic(input: Span) -> IResult<Span, Vec<Value>> {
         alt((
             digit1
                 .map(|span| coord(span))
-                .map(|digit| Value::Number(digit)),
+                .map(Value::Number),
             is_not(".\n0123456789")
                 .map(|span| coord(span))
-                .map(|s| Value::Symbol(s)),
+                .map(Value::Symbol),
             take_till1(|c: char| c.is_ascii_digit() || c != '.' && c != '\n').map(|_| Value::Empty),
         )),
     );
@@ -83,7 +83,7 @@ fn process(input: &'static str) -> Result<String> {
                     let Value::Symbol(sym) = symbol else {
                         return false;
                     };
-                    neighbors.iter().find(|pos| pos == &&sym.extra).is_some()
+                    neighbors.iter().any(|pos| &pos == &&sym.extra)
                 })
                 .then_some(
                     num.fragment()

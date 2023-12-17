@@ -27,7 +27,7 @@ impl From<char> for Card {
             'Q' => Self::Queen,
             'J' => Self::Jack,
             'T' => Self::Value(10),
-            c if c.is_digit(10) => Self::Value(c.to_digit(10).expect("should be a number")),
+            c if c.is_ascii_digit() => Self::Value(c.to_digit(10).expect("should be a number")),
             _ => unreachable!(),
         }
     }

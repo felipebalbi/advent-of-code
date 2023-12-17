@@ -112,7 +112,7 @@ fn process(input: &'static str) -> Result<String> {
     let locations = almanac
         .seeds
         .iter()
-        .flat_map(|range| range.clone().into_iter())
+        .flat_map(|range| range.clone())
         .collect::<Vec<u64>>();
 
     let closest = locations

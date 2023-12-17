@@ -41,10 +41,10 @@ fn line(input: Span) -> IResult<Span, Vec<Value>> {
     many1(alt((
         tag(".")
             .map(|span| coordinate(span))
-            .map(|empty| Value::Empty(empty)),
+            .map(Value::Empty),
         tag("#")
             .map(|span| coordinate(span))
-            .map(|pound| Value::Galaxy(pound)),
+            .map(Value::Galaxy),
     )))(input)
 }
 
@@ -152,7 +152,7 @@ fn process(input: &'static str) -> Result<String> {
 pub fn part2(input: &'static str) -> Result<String> {
     info!("part 2");
 
-    process(&input).context("process part 2")
+    process(input).context("process part 2")
 }
 
 #[cfg(test)]

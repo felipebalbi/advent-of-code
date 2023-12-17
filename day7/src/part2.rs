@@ -27,7 +27,7 @@ impl From<char> for Card {
             'Q' => Self::Queen,
             'J' => Self::Joker,
             'T' => Self::Value(10),
-            c if c.is_digit(10) => Self::Value(c.to_digit(10).expect("should be a number")),
+            c if c.is_ascii_digit() => Self::Value(c.to_digit(10).expect("should be a number")),
             _ => unreachable!(),
         }
     }
@@ -72,9 +72,9 @@ fn cards(input: &str) -> IResult<&str, RankedHand> {
             });
 
         if map.keys().contains(&Card::Joker) {
-            let jokers = map.get(&Card::Joker).expect("should have a joker").clone();
+            let jokers = *map.get(&Card::Joker).expect("should have a joker");
 
-            let mut best = map.iter().next_back().unwrap().clone();
+            let mut best = map.iter().next_back().unwrap();
 
             for (key, value) in map.iter() {
                 if value > best.1 && key != &Card::Joker {

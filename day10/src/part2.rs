@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use petgraph::{algo::dijkstra, prelude::*, visit::Dfs};
+use petgraph::{prelude::*, visit::Dfs};
 use tracing::info;
 
 #[derive(Debug, Hash, Copy, Clone, PartialEq, Eq)]
@@ -79,68 +79,44 @@ fn build_graph(maze: &[Tile]) -> (Graph<(), f32, Directed>, Vec<(Tile, NodeIndex
     for (i, (tile, node)) in nodes.iter().enumerate() {
         match tile.pipe {
             Pipe::NorthSouth => {
-                nodes.get(i + length).and_then(|neighbor| {
-                    Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                });
+                nodes.get(i + length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
                 if i >= length {
-                    nodes.get(i - length).and_then(|neighbor| {
-                        Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                    });
+                    nodes.get(i - length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
                 }
             }
             Pipe::EastWest => {
-                nodes.get(i + 1).and_then(|neighbor| {
-                    Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                });
+                nodes.get(i + 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
                 if i >= 1 {
-                    nodes.get(i - 1).and_then(|neighbor| {
-                        Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                    });
+                    nodes.get(i - 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
                 }
             }
 
             Pipe::NorthEast => {
                 if i >= length {
-                    nodes.get(i - length).and_then(|neighbor| {
-                        Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                    });
+                    nodes.get(i - length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
                 }
-                nodes.get(i + 1).and_then(|neighbor| {
-                    Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                });
+                nodes.get(i + 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
             }
 
             Pipe::NorthWest => {
                 if i >= length {
-                    nodes.get(i - length).and_then(|neighbor| {
-                        Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                    });
+                    nodes.get(i - length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
                 }
                 if i >= 1 {
-                    nodes.get(i - 1).and_then(|neighbor| {
-                        Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                    });
+                    nodes.get(i - 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
                 }
             }
 
             Pipe::SouthWest => {
-                nodes.get(i + length).and_then(|neighbor| {
-                    Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                });
+                nodes.get(i + length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
                 if i >= 1 {
-                    nodes.get(i - 1).and_then(|neighbor| {
-                        Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                    });
+                    nodes.get(i - 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
                 }
             }
 
             Pipe::SouthEast => {
-                nodes.get(i + 1).and_then(|neighbor| {
-                    Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                });
-                nodes.get(i + length).and_then(|neighbor| {
-                    Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                });
+                nodes.get(i + 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
+                nodes.get(i + length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
             }
 
             Pipe::Start => {

@@ -33,8 +33,8 @@ fn schematic(input: Span) -> IResult<Span, Vec<Value>> {
         alt((
             digit1
                 .map(|span| coord(span))
-                .map(|digit| Value::Number(digit)),
-            is_a("*").map(|span| coord(span)).map(|s| Value::Symbol(s)),
+                .map(Value::Number),
+            is_a("*").map(|span| coord(span)).map(Value::Symbol),
             take_till1(|c: char| c.is_ascii_digit() || c == '*' && c != '\n').map(|_| Value::Empty),
         )),
     );
@@ -89,7 +89,7 @@ fn process(input: &'static str) -> Result<String> {
                         .find(|pos| {
                             let r = pos == &&sym.extra;
                             if r {
-                                symbol_pos = sym.extra.clone();
+                                symbol_pos = sym.extra;
                             }
 
                             r

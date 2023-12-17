@@ -75,7 +75,7 @@ fn process(input: &'static str) -> Result<String> {
     let (_, (directions, nodes)) = camel_map(input)?;
     let starting_points = nodes
         .iter()
-        .filter(|(name, _)| name.ends_with("A"))
+        .filter(|(name, _)| name.ends_with('A'))
         .collect::<Vec<_>>();
 
     info!(?starting_points);
@@ -105,7 +105,7 @@ fn process(input: &'static str) -> Result<String> {
                         _ => unreachable!(),
                     };
 
-                    if name.ends_with("Z") {
+                    if name.ends_with('Z') {
                         Err(acc)
                     } else {
                         name = next_name;

@@ -6,7 +6,7 @@ fn process(input: &'static str) -> Result<String> {
     info!("processing input");
 
     let result = input
-        .split(",")
+        .split(',')
         .map(|inst| {
             inst.chars()
                 .filter(|c| c != &'\n')

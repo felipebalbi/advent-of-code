@@ -62,67 +62,55 @@ fn build_graph(maze: &[Tile]) -> (Graph<(), (), Directed>, (Tile, NodeIndex)) {
         match tile {
             Tile::NorthSouth => {
                 nodes
-                    .get(i + length)
-                    .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                    .get(i + length).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
                 if i >= length {
                     nodes
-                        .get(i - length)
-                        .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                        .get(i - length).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
                 }
             }
             Tile::EastWest => {
                 nodes
-                    .get(i + 1)
-                    .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                    .get(i + 1).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
                 if i >= 1 {
                     nodes
-                        .get(i - 1)
-                        .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                        .get(i - 1).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
                 }
             }
 
             Tile::NorthEast => {
                 if i >= length {
                     nodes
-                        .get(i - length)
-                        .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                        .get(i - length).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
                 }
                 nodes
-                    .get(i + 1)
-                    .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                    .get(i + 1).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
             }
 
             Tile::NorthWest => {
                 if i >= length {
                     nodes
-                        .get(i - length)
-                        .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                        .get(i - length).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
                 }
                 if i >= 1 {
                     nodes
-                        .get(i - 1)
-                        .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                        .get(i - 1).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
                 }
             }
 
             Tile::SouthWest => {
                 nodes
-                    .get(i + length)
-                    .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                    .get(i + length).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
                 if i >= 1 {
                     nodes
-                        .get(i - 1)
-                        .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                        .get(i - 1).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
                 }
             }
 
             Tile::SouthEast => {
                 nodes
-                    .get(i + 1)
-                    .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                    .get(i + 1).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
                 nodes
-                    .get(i + length)
-                    .and_then(|neighbor| Some(graph.add_edge(*node, neighbor.1, ())));
+                    .get(i + length).map(|neighbor| graph.add_edge(*node, neighbor.1, ()));
             }
 
             Tile::Start => {
