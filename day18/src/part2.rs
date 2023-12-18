@@ -8,7 +8,6 @@ use nom::{
     sequence::tuple,
     IResult,
 };
-use polygonical::{point::Point, polygon::Polygon};
 use tracing::info;
 
 #[derive(Debug)]
@@ -71,12 +70,12 @@ fn process(input: &'static str) -> Result<String> {
 
     let points = dig_plan
         .iter()
-        .scan(Point::new(0.0, 0.0), |state, inst| {
+        .scan((0.0, 0.0), |state, inst| {
             match inst.direction {
-                Direction::Up => state.y -= inst.amount as f64,
-                Direction::Down => state.y += inst.amount as f64,
-                Direction::Left => state.x -= inst.amount as f64,
-                Direction::Right => state.x += inst.amount as f64,
+                Direction::Up => state.1 -= inst.amount as f64,
+                Direction::Down => state.1 += inst.amount as f64,
+                Direction::Left => state.0 -= inst.amount as f64,
+                Direction::Right => state.0 += inst.amount as f64,
             };
 
             Some(*state)
@@ -87,11 +86,15 @@ fn process(input: &'static str) -> Result<String> {
         .iter()
         .circular_tuple_windows()
         .fold(0.0, |acc, (p1, p2)| {
-            acc + (p1.x - p2.x).abs() + (p1.y - p2.y).abs()
+            acc + (p1.0 - p2.0).abs() + (p1.1 - p2.1).abs()
         });
 
-    let poly = Polygon::new(points);
-    let area = poly.area().abs() + perimeter / 2.0 + 1.0;
+    let area = points
+        .iter()
+        .tuple_windows()
+        .fold(0.0, |acc, (p1, p2)| acc + 0.5 * (p1.0 * p2.1 - p2.0 * p1.1))
+        + perimeter / 2.0
+        + 1.0;
 
     Ok(area.to_string())
 }
