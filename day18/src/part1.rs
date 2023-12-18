@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use itertools::Itertools;
+use glam::I64Vec2;
 use nom::{
     bytes::complete::{tag, take_until},
     character::complete::{self, line_ending, one_of, space1},
@@ -21,7 +21,7 @@ enum Direction {
 #[derive(Debug)]
 struct Instruction {
     direction: Direction,
-    amount: i32,
+    amount: i64,
 }
 
 fn color(input: &str) -> IResult<&str, ()> {
@@ -29,8 +29,8 @@ fn color(input: &str) -> IResult<&str, ()> {
 }
 
 #[tracing::instrument(skip(input))]
-fn amount(input: &str) -> IResult<&str, i32> {
-    complete::i32(input)
+fn amount(input: &str) -> IResult<&str, i64> {
+    complete::i64(input)
 }
 
 #[tracing::instrument(skip(input))]
@@ -69,35 +69,25 @@ fn process(input: &'static str) -> Result<String> {
 
     let (_, dig_plan) = dig_plan(input)?;
 
-    // info!(?dig_plan);
-
-    let points = dig_plan
-        .iter()
-        .scan((0.0, 0.0), |state, inst| {
-            match inst.direction {
-                Direction::Up => state.1 -= inst.amount as f64,
-                Direction::Down => state.1 += inst.amount as f64,
-                Direction::Left => state.0 -= inst.amount as f64,
-                Direction::Right => state.0 += inst.amount as f64,
+    let (inner_area, perimeter, _) = dig_plan.iter().fold(
+        (0, 1, I64Vec2::splat(0)),
+        |(area, perimeter, current), inst| {
+            let delta = match inst.direction {
+                Direction::Up => I64Vec2::new(0, -inst.amount),
+                Direction::Down => I64Vec2::new(0, inst.amount),
+                Direction::Left => I64Vec2::new(-inst.amount, 0),
+                Direction::Right => I64Vec2::new(inst.amount, 0),
             };
 
-            Some(*state)
-        })
-        .collect::<Vec<_>>();
+            (
+                area + delta.x * current.y,
+                perimeter + delta.x.abs() + delta.y.abs(),
+                current + delta,
+            )
+        },
+    );
 
-    let perimeter = points
-        .iter()
-        .circular_tuple_windows()
-        .fold(0.0, |acc, (p1, p2)| {
-            acc + (p1.0 - p2.0).abs() + (p1.1 - p2.1).abs()
-        });
-
-    let area = points
-        .iter()
-        .tuple_windows()
-        .fold(0.0, |acc, (p1, p2)| acc + 0.5 * (p1.0 * p2.1 - p2.0 * p1.1))
-        + perimeter / 2.0
-        + 1.0;
+    let area = inner_area.abs() + perimeter / 2 + 1;
 
     Ok(area.to_string())
 }
