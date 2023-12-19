@@ -3,9 +3,9 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::{self, alpha1, line_ending, one_of},
-    combinator::{map, opt},
+    combinator::map,
     multi::{many1, separated_list1},
-    sequence::{delimited, pair, separated_pair, tuple},
+    sequence::{delimited, separated_pair, tuple},
     IResult,
 };
 use std::{cmp::Ordering, collections::BTreeMap};
@@ -19,11 +19,37 @@ enum Target<'a> {
 }
 
 #[derive(Debug)]
-struct Rule<'a> {
-    category: Option<char>,
-    ordering: Option<Ordering>,
-    number: Option<i32>,
-    target: Target<'a>,
+enum Rule<'a> {
+    Test {
+        category: char,
+        ordering: Ordering,
+        number: i32,
+        target: Target<'a>,
+    },
+    Target(Target<'a>),
+}
+
+impl<'a> Rule<'a> {
+    fn apply(&self, part: &Part) -> Option<&Target> {
+        match self {
+            Rule::Test {
+                category,
+                ordering,
+                number,
+                target,
+            } => {
+                let test_value = match *category {
+                    'x' => part.x,
+                    'm' => part.m,
+                    'a' => part.a,
+                    's' => part.s,
+                    _ => unreachable!(),
+                };
+                (test_value.cmp(number) == *ordering).then_some(target)
+            }
+            Rule::Target(target) => Some(target),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -43,36 +69,34 @@ fn target<'a>(input: &'a str) -> IResult<&str, Target<'a>> {
     ))(input)
 }
 
-// px{a<2006:qkq,m>2090:A,rfg}
-// pv{a>1716:R,A}
-// lnx{m>1548:A,A}
-// rfg{s<537:gd,x>2440:R,A}
-
 #[tracing::instrument(skip(input))]
 fn rule(input: &str) -> IResult<&str, Rule> {
-    map(
-        tuple((
-            opt(one_of("xmas")),
-            opt(one_of("<>")),
-            opt(complete::i32),
-            opt(tag(":")),
-            target,
-        )),
-        |(category, operation, number, _, target)| {
-            let ordering = match operation {
-                Some('<') => Some(Ordering::Less),
-                Some('>') => Some(Ordering::Greater),
-                _ => None,
-            };
-
-            Rule {
-                category,
-                ordering,
-                number,
+    alt((
+        map(
+            tuple((
+                one_of("xmas"),
+                one_of("<>"),
+                complete::i32,
+                tag(":"),
                 target,
-            }
-        },
-    )(input)
+            )),
+            |(category, ordering, number, _, target)| {
+                let ordering = match ordering {
+                    '<' => Ordering::Less,
+                    '>' => Ordering::Greater,
+                    _ => unreachable!(),
+                };
+
+                Rule::Test {
+                    category,
+                    ordering,
+                    number,
+                    target,
+                }
+            },
+        ),
+        map(target, |target| Rule::Target(target)),
+    ))(input)
 }
 
 #[tracing::instrument(skip(input))]
@@ -135,25 +159,44 @@ fn process(input: &'static str) -> Result<String> {
 
     let (_, (workflows, parts)) = workflows_and_parts(input)?;
 
-    let mut accepted: Vec<Part> = vec![];
+    let result = parts
+        .iter()
+        .filter_map(|part| {
+            let mut current_workflow = "in";
 
-    for part in parts.iter() {
-        let mut workflow = workflows.get("in").expect("should exist");
+            let last_target: Target = 'workflow_loop: loop {
+                let active_workflow = workflows
+                    .get(current_workflow)
+                    .expect("should only fetch valid workflows");
 
-        for rule in workflow.iter() {
-            match rule.category {
-                Some('x') => todo!(),
-                Some('m') => todo!(),
-                Some('a') => todo!(),
-                Some('s') => todo!(),
-                _ => None::<char>,
+                'rule_loop: for rule in active_workflow.iter() {
+                    match rule.apply(part) {
+                        Some(Target::Accept) => {
+                            break 'workflow_loop Target::Accept;
+                        }
+                        Some(Target::Reject) => {
+                            break 'workflow_loop Target::Reject;
+                        }
+                        Some(Target::Workflow(next_workflow)) => {
+                            current_workflow = next_workflow;
+                            break 'rule_loop;
+                        }
+                        None => {}
+                    }
+                }
             };
-        }
-    }
 
-    info!(?workflows, ?parts);
+            match last_target {
+                Target::Workflow(_) => {
+                    unreachable!("shouldn't end on a workflow")
+                }
+                Target::Accept => Some(part.x + part.m + part.a + part.s),
+                Target::Reject => None,
+            }
+        })
+        .sum::<i32>();
 
-    Ok("".to_string())
+    Ok(result.to_string())
 }
 
 #[tracing::instrument(skip(input))]
