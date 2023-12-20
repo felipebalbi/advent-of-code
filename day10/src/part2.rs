@@ -12,8 +12,10 @@ fn points(input: &str) -> Vec<(usize, usize)> {
     let start_coord = grid
         .items()
         .find(|(_, c)| *c == &'S')
-        .map(|((x, y), _)| (x, y))
+        .map(|((row, col), _)| (row, col))
         .expect("should have a start");
+
+    info!(?start_coord);
 
     let mut points = vec![start_coord];
 
@@ -80,7 +82,6 @@ fn points(input: &str) -> Vec<(usize, usize)> {
         first_neighbor.1 as isize - start_coord.1 as isize,
     );
 
-    // points are (y, x)
     while let Some(p) = grid.move_in_direction(next_point, travel_direction) {
         if let Some(c) = grid.get(p) {
             if *c == 'S' {
@@ -127,29 +128,27 @@ fn points(input: &str) -> Vec<(usize, usize)> {
     points
 }
 
+#[allow(unused)]
 fn print_area(input: &str, points: &Vec<(usize, usize)>) {
     let area = input
         .lines()
         .enumerate()
-        .map(|(y, line)| {
+        .map(|(row, line)| {
             let mut inside = false;
 
             line.chars()
                 .enumerate()
-                .map(|(x, c)| {
-                    if points.contains(&(y, x)) {
-                        if c == 'S' || c == '|' || c == '7' || c == 'F' {
+                .map(|(col, c)| {
+                    if points.contains(&(row, col)) {
+                        if ['S', '|', '7', 'F'].contains(&c) {
                             inside = !inside;
                         }
 
                         c
                     } else {
                         if inside {
-                            info!(?y, ?x, ?c, ?inside);
                             '#'
-                            // inner_acc + 1
                         } else {
-                            // inner_acc
                             c
                         }
                     }
@@ -166,21 +165,39 @@ fn process(input: &'static str) -> Result<String> {
     info!("processing input");
 
     let points = points(input);
-    print_area(input, &points);
 
-    let area = input.lines().enumerate().fold(0, |acc, (y, line)| {
+    let filtered = input
+        .lines()
+        .enumerate()
+        .map(|(y, line)| {
+            line.chars()
+                .enumerate()
+                .filter_map(|(x, c)| {
+                    if points.contains(&(y, x)) {
+                        Some(c)
+                    } else {
+                        Some('.')
+                    }
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    // print_area(input, &points);
+
+    let area = filtered.iter().enumerate().fold(0, |acc, (row, line)| {
         let mut inside = false;
 
-        acc + line.chars().enumerate().fold(0, |inner_acc, (x, c)| {
-            if points.contains(&(y, x)) {
-                if c == 'S' || c == '|' || c == '7' || c == 'F' {
+        acc + line.iter().enumerate().fold(0, |inner_acc, (col, c)| {
+            if points.contains(&(row, col)) {
+                if ['S', '|', '7', 'F'].contains(&c) {
                     inside = !inside;
                 }
 
                 inner_acc
             } else {
                 if inside {
-                    info!(?y, ?x, ?c, ?inside);
+                    info!(?row, ?col, ?c);
                     inner_acc + 1
                 } else {
                     inner_acc
