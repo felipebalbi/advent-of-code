@@ -1,222 +1,197 @@
 use anyhow::{Context, Result};
-use petgraph::{prelude::*, visit::Dfs};
+use pathfinding::matrix::{directions, Matrix};
 use tracing::info;
 
-#[derive(Debug, Hash, Copy, Clone, PartialEq, Eq)]
-enum Pipe {
-    NorthSouth,
-    EastWest,
-    NorthEast,
-    NorthWest,
-    SouthWest,
-    SouthEast,
-    Ground,
-    Start,
-}
-
-#[derive(Debug, Hash, Copy, Clone, PartialEq, Eq)]
-struct Tile {
-    x: usize,
-    y: usize,
-    pipe: Pipe,
-}
-
-impl Tile {
-    fn new(x: usize, y: usize, pipe: Pipe) -> Self {
-        Self { x, y, pipe }
-    }
-
-    fn area(&self, other: &Tile) -> f32 {
-        // 0.5 * (self.y as f32 + other.y as f32) * (self.x as f32 - other.x as f32)
-        0.5 * ((self.x * other.y) as f32 - (other.x * self.y) as f32)
-    }
-}
-
-impl Default for Tile {
-    fn default() -> Self {
-        Tile {
-            x: 0,
-            y: 0,
-            pipe: Pipe::Ground,
-        }
-    }
-}
-
 #[tracing::instrument(skip(input))]
-fn maze(input: &str) -> Vec<Tile> {
-    input
+fn points(input: &str) -> Vec<(usize, usize)> {
+    let grid = input
         .lines()
-        .enumerate()
-        .flat_map(|(y, line)| {
-            line.chars().enumerate().map(move |(x, c)| match c {
-                '|' => Tile::new(x + 1, y + 1, Pipe::NorthSouth),
-                '-' => Tile::new(x + 1, y + 1, Pipe::EastWest),
-                'L' => Tile::new(x + 1, y + 1, Pipe::NorthEast),
-                'J' => Tile::new(x + 1, y + 1, Pipe::NorthWest),
-                '7' => Tile::new(x + 1, y + 1, Pipe::SouthWest),
-                'F' => Tile::new(x + 1, y + 1, Pipe::SouthEast),
-                '.' => Tile::new(x + 1, y + 1, Pipe::Ground),
-                'S' => Tile::new(x + 1, y + 1, Pipe::Start),
-                _ => unreachable!(),
-            })
-        })
-        .collect::<Vec<_>>()
-}
+        .map(|line| line.chars())
+        .collect::<Matrix<char>>();
 
-#[tracing::instrument(skip(maze))]
-fn build_graph(maze: &[Tile]) -> (Graph<(), f32, Directed>, Vec<(Tile, NodeIndex)>) {
-    let mut graph: Graph<(), f32, Directed> = Graph::new();
-    let nodes = maze
-        .iter()
-        .map(|tile| {
-            let node = graph.add_node(());
-            (*tile, node)
+    let start_coord = grid
+        .items()
+        .find(|(_, c)| *c == &'S')
+        .map(|((x, y), _)| (x, y))
+        .expect("should have a start");
+
+    let mut points = vec![start_coord];
+
+    // find all valid directions from the S node
+    let valid_neighbors = directions::DIRECTIONS_4
+        .into_iter()
+        .filter_map(|direction| {
+            grid.move_in_direction((start_coord.0, start_coord.1), direction)
+                .filter(|neighbor_position| match direction {
+                    directions::N => {
+                        if let Some(c) = grid.get(*neighbor_position) {
+                            match *c {
+                                '|' | 'F' | '7' => true,
+                                _ => false,
+                            }
+                        } else {
+                            false
+                        }
+                    }
+                    directions::S => {
+                        if let Some(c) = grid.get(*neighbor_position) {
+                            match *c {
+                                '|' | 'L' | 'J' => true,
+                                _ => false,
+                            }
+                        } else {
+                            false
+                        }
+                    }
+                    directions::E => {
+                        if let Some(c) = grid.get(*neighbor_position) {
+                            match *c {
+                                '-' | 'J' | '7' => true,
+                                _ => false,
+                            }
+                        } else {
+                            false
+                        }
+                    }
+                    directions::W => {
+                        if let Some(c) = grid.get(*neighbor_position) {
+                            match *c {
+                                '-' | 'L' | 'F' => true,
+                                _ => false,
+                            }
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                })
         })
         .collect::<Vec<_>>();
 
-    let length = (maze.len() as f32).sqrt() as usize;
+    // Take the first and find a matching corner
+    let first_neighbor = valid_neighbors
+        .first()
+        .expect("should have a first element");
 
-    for (i, (tile, node)) in nodes.iter().enumerate() {
-        match tile.pipe {
-            Pipe::NorthSouth => {
-                nodes.get(i + length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
-                if i >= length {
-                    nodes.get(i - length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
-                }
-            }
-            Pipe::EastWest => {
-                nodes.get(i + 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
-                if i >= 1 {
-                    nodes.get(i - 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
-                }
-            }
+    let mut next_point = start_coord;
 
-            Pipe::NorthEast => {
-                if i >= length {
-                    nodes.get(i - length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
-                }
-                nodes.get(i + 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
+    let mut travel_direction = (
+        first_neighbor.0 as isize - start_coord.0 as isize,
+        first_neighbor.1 as isize - start_coord.1 as isize,
+    );
+
+    // points are (y, x)
+    while let Some(p) = grid.move_in_direction(next_point, travel_direction) {
+        if let Some(c) = grid.get(p) {
+            if *c == 'S' {
+                break;
             }
 
-            Pipe::NorthWest => {
-                if i >= length {
-                    nodes.get(i - length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
-                }
-                if i >= 1 {
-                    nodes.get(i - 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
-                }
-            }
+            next_point = p;
+            points.push(p);
 
-            Pipe::SouthWest => {
-                nodes.get(i + length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
-                if i >= 1 {
-                    nodes.get(i - 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
+            match travel_direction {
+                directions::E if *c == 'J' => {
+                    travel_direction = directions::N;
                 }
-            }
-
-            Pipe::SouthEast => {
-                nodes.get(i + 1).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
-                nodes.get(i + length).map(|neighbor| graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)));
-            }
-
-            Pipe::Start => {
-                nodes.get(i + 1).and_then(|neighbor| {
-                    if neighbor.0.pipe == Pipe::EastWest
-                        || neighbor.0.pipe == Pipe::SouthWest
-                        || neighbor.0.pipe == Pipe::NorthWest
-                    {
-                        Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                    } else {
-                        None
-                    }
-                });
-
-                if i >= 1 {
-                    nodes.get(i - 1).and_then(|neighbor| {
-                        if neighbor.0.pipe == Pipe::EastWest
-                            || neighbor.0.pipe == Pipe::SouthEast
-                            || neighbor.0.pipe == Pipe::NorthEast
-                        {
-                            Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                        } else {
-                            None
-                        }
-                    });
+                directions::E if *c == '7' => {
+                    travel_direction = directions::S;
                 }
-                nodes.get(i + length).and_then(|neighbor| {
-                    if neighbor.0.pipe == Pipe::NorthSouth
-                        || neighbor.0.pipe == Pipe::NorthWest
-                        || neighbor.0.pipe == Pipe::NorthEast
-                    {
-                        Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                    } else {
-                        None
-                    }
-                });
-                if i >= length {
-                    nodes.get(i - length).and_then(|neighbor| {
-                        if neighbor.0.pipe == Pipe::NorthSouth
-                            || neighbor.0.pipe == Pipe::SouthWest
-                            || neighbor.0.pipe == Pipe::SouthEast
-                        {
-                            Some(graph.add_edge(*node, neighbor.1, tile.area(&neighbor.0)))
-                        } else {
-                            None
-                        }
-                    });
+
+                directions::W if *c == 'L' => {
+                    travel_direction = directions::N;
                 }
+                directions::W if *c == 'F' => {
+                    travel_direction = directions::S;
+                }
+
+                directions::N if *c == 'F' => {
+                    travel_direction = directions::E;
+                }
+                directions::N if *c == '7' => {
+                    travel_direction = directions::W;
+                }
+
+                directions::S if *c == 'L' => {
+                    travel_direction = directions::E;
+                }
+                directions::S if *c == 'J' => {
+                    travel_direction = directions::W;
+                }
+
+                _ => {}
             }
-            _ => {}
         }
     }
 
-    (graph, nodes)
+    points
+}
+
+fn print_area(input: &str, points: &Vec<(usize, usize)>) {
+    let area = input
+        .lines()
+        .enumerate()
+        .map(|(y, line)| {
+            let mut inside = false;
+
+            line.chars()
+                .enumerate()
+                .map(|(x, c)| {
+                    if points.contains(&(y, x)) {
+                        if c == 'S' || c == '|' || c == '7' || c == 'F' {
+                            inside = !inside;
+                        }
+
+                        c
+                    } else {
+                        if inside {
+                            info!(?y, ?x, ?c, ?inside);
+                            '#'
+                            // inner_acc + 1
+                        } else {
+                            // inner_acc
+                            c
+                        }
+                    }
+                })
+                .collect::<String>()
+        })
+        .collect::<Vec<String>>();
+
+    println!("{}", area.join("\n"));
 }
 
 #[tracing::instrument(skip(input))]
 fn process(input: &'static str) -> Result<String> {
     info!("processing input");
 
-    let maze = maze(input);
-    let (graph, nodes) = build_graph(&maze);
-    let start = nodes
-        .iter()
-        .find(|(tile, _)| tile.pipe == Pipe::Start)
-        .expect("must have a starting node");
+    let points = points(input);
+    print_area(input, &points);
 
-    info!(?graph);
+    let area = input.lines().enumerate().fold(0, |acc, (y, line)| {
+        let mut inside = false;
 
-    let mut area = 0.0;
+        acc + line.chars().enumerate().fold(0, |inner_acc, (x, c)| {
+            if points.contains(&(y, x)) {
+                if c == 'S' || c == '|' || c == '7' || c == 'F' {
+                    inside = !inside;
+                }
 
-    let mut dfs = Dfs::new(&graph, start.1);
-    let mut last_index = start.1;
+                inner_acc
+            } else {
+                if inside {
+                    info!(?y, ?x, ?c, ?inside);
+                    inner_acc + 1
+                } else {
+                    inner_acc
+                }
+            }
+        })
+    });
 
-    while let Some(source) = dfs.next(&graph) {
-        let mut edges = graph.neighbors_directed(source, Outgoing).detach();
+    let result = area;
 
-        last_index = source;
-
-        while let Some((edge, target)) = edges.next(&graph) {
-            let weight = graph.edge_weight(edge).expect("edge must have weight");
-
-            info!(?source, ?target, ?weight);
-
-            area += weight;
-        }
-    }
-
-    let end = nodes
-        .iter()
-        .find(|(_, index)| *index == last_index)
-        .expect("must have an end node");
-
-    info!(?start, ?end);
-
-    area += end.0.area(&start.0);
-
-    info!(?area);
-
-    Ok(area.to_string())
+    Ok(result.to_string())
 }
 
 #[tracing::instrument(skip(input))]
@@ -246,7 +221,6 @@ mod tests {
         assert_eq!(result, "4");
     }
 
-    #[ignore]
     #[test_log::test]
     fn complex_loop() {
         let input = r##".F----7F7F7F7F-7....
@@ -264,7 +238,6 @@ L--J.L7...LJS7F-7L7.
         assert_eq!(result, "8");
     }
 
-    #[ignore]
     #[test_log::test]
     fn even_more_complex_loop() {
         let input = r##"FF7FSF7F7F7F7F7F---7

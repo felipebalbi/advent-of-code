@@ -6,8 +6,10 @@ edition = "2021"
 [dependencies]
 anyhow = { workspace = true }
 dhat = { workspace = true }
+glam = { workspace = true }
 itertools = { workspace = true }
 nom = { workspace = true }
+pathfinding = { workspace = true }
 petgraph = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
