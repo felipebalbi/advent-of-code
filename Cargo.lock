@@ -400,6 +400,7 @@ dependencies = [
  "itertools",
  "nom",
  "nom_locate",
+ "pathfinding",
  "petgraph",
  "rayon",
  "test-log",

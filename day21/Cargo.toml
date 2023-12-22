@@ -10,6 +10,7 @@ glam = { workspace = true }
 itertools = { workspace = true }
 nom = { workspace = true }
 nom_locate = { workspace = true }
+pathfinding = { workspace = true }
 petgraph = { workspace = true }
 rayon = { workspace = true }
 tracing = { workspace = true }
