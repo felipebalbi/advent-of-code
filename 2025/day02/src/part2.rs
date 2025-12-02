@@ -1,79 +1,68 @@
+use std::ops::RangeInclusive;
+
 use anyhow::{Context, Result};
 use nom::{
     IResult, Parser,
-    branch::alt,
     bytes::complete::tag,
-    character::complete::{self, line_ending},
+    character::complete::{self},
     combinator::map,
     multi::separated_list1,
-    sequence::pair,
+    sequence::separated_pair,
 };
 use tracing::info;
 
-#[derive(Clone, Copy, Debug)]
-enum Rotation {
-    Left(i64),
-    Right(i64),
-}
-
 #[tracing::instrument(skip(input))]
-fn rotation(input: &str) -> IResult<&str, Rotation> {
-    map(pair(alt((tag("L"), tag("R"))), complete::i64), |(c, n)| {
-        if c == "L" {
-            Rotation::Left(n)
-        } else {
-            Rotation::Right(n)
-        }
-    })
+fn range(input: &str) -> IResult<&str, RangeInclusive<u64>> {
+    map(
+        separated_pair(complete::u64, tag("-"), complete::u64),
+        |(low, high)| RangeInclusive::new(low, high),
+    )
     .parse(input)
 }
 
 #[tracing::instrument(skip(input))]
-fn rotations(input: &str) -> IResult<&str, Vec<Rotation>> {
-    separated_list1(line_ending, rotation).parse(input)
+fn ranges(input: &str) -> IResult<&str, Vec<RangeInclusive<u64>>> {
+    separated_list1(tag(","), range).parse(input)
 }
 
 #[tracing::instrument(skip(input))]
 fn process(input: &'static str) -> Result<String> {
     info!("processing input");
 
-    let (_, rotations) = rotations.parse(input)?;
-    let mut dial = 50;
-    let mut crossings = 0;
+    let (_, ranges) = ranges(input)?;
 
-    for rot in rotations {
-        match rot {
-            Rotation::Left(n) => {
-                crossings += n / 100;
-                let remainder = n % 100;
+    let count = ranges
+        .iter()
+        .map(|range| {
+            range
+                .clone()
+                .into_iter()
+                .filter(|n| {
+                    let s = n.to_string();
+                    let len = s.len();
 
-                if dial > 0 && (dial - remainder) <= 0 {
-                    crossings += 1;
-                }
+                    // Try all possible substring lengths
+                    for sub_len in 1..=len / 2 {
+                        if len % sub_len == 0 {
+                            let pattern = &s[..sub_len];
+                            let repeated = pattern.repeat(len / sub_len);
+                            if repeated == s {
+                                return true;
+                            }
+                        }
+                    }
+                    false
+                })
+                .sum::<u64>()
+        })
+        .sum::<u64>();
 
-                dial -= remainder;
-                dial = dial.rem_euclid(100);
-            }
-            Rotation::Right(n) => {
-                crossings += n / 100;
-                let remainder = n % 100;
-
-                dial += remainder;
-
-                if dial >= 100 {
-                    crossings += 1;
-                }
-                dial = dial.rem_euclid(100);
-            }
-        }
-    }
-
-    Ok(crossings.to_string())
+    Ok(count.to_string())
 }
 
 #[tracing::instrument(skip(input))]
 pub fn part2(input: &'static str) -> Result<String> {
-    info!("part 2");
+    info!("part 1");
 
     process(input).context("process part 2")
 }
@@ -84,28 +73,9 @@ mod tests {
 
     #[test_log::test]
     fn it_works() {
-        let input = r##"L68
-L30
-R48
-L5
-R60
-L55
-L1
-L99
-R14
-L82
+        let input = r##"11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124
 "##;
         let result = process(input).unwrap();
-        assert_eq!(result, "6");
-    }
-
-    #[test_log::test]
-    fn r1000() {
-        let input = r##"L50
-L50
-L100
-L150"##;
-        let result = process(input).unwrap();
-        assert_eq!(result, "4");
+        assert_eq!(result, "4174379265");
     }
 }
