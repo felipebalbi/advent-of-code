@@ -1,0 +1,27 @@
+[workspace]
+resolver = "2"
+members = [
+    "day*",
+]
+
+[workspace.dependencies]
+anyhow = "1.0.100"
+cached = "0.56.0"
+dhat = "0.3.3"
+divan = "0.1.21"
+glam = "0.30.9"
+itertools = "0.14.0"
+nom = "8.0.0"
+nom_locate = "5.0.0"
+pathfinding = "4.14.0"
+petgraph = "0.8.3"
+rayon = "1.11.0"
+rstest = "0.26.1"
+rstest_reuse = "0.7.0"
+test-log = { version = "0.2.19", default-features = false, features = ["trace"] }
+thiserror = "2.0.17"
+tracing = "0.1.43"
+tracing-subscriber = { version = "0.3.22", features = ["fmt", "env-filter"] }
+tracing-tracy = "0.11.4"
+tracy-client = "0.13.3"
+tracy-client-sys = "0.27.0"
