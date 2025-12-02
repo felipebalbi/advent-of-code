@@ -1,5 +1,5 @@
 use anyhow::Result;
-use day01::{part1, part2};
+use day02::{part1, part2};
 
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]

@@ -10,53 +10,10 @@ use nom::{
 };
 use tracing::info;
 
-#[derive(Clone, Copy, Debug)]
-enum Rotation {
-    Left(i64),
-    Right(i64),
-}
-
-#[tracing::instrument(skip(input))]
-fn rotation(input: &str) -> IResult<&str, Rotation> {
-    map(pair(alt((tag("L"), tag("R"))), complete::i64), |(c, n)| {
-        if c == "L" {
-            Rotation::Left(n)
-        } else {
-            Rotation::Right(n)
-        }
-    })
-    .parse(input)
-}
-
-#[tracing::instrument(skip(input))]
-fn rotations(input: &str) -> IResult<&str, Vec<Rotation>> {
-    separated_list1(line_ending, rotation).parse(input)
-}
-
 #[tracing::instrument(skip(input))]
 fn process(input: &'static str) -> Result<String> {
     info!("processing input");
-
-    let (_, rotations) = rotations.parse(input)?;
-    let mut dial = 50;
-    let mut zero_count = 0;
-
-    for rot in rotations {
-        match rot {
-            Rotation::Left(n) => {
-                dial = (dial - n) % 100;
-            }
-            Rotation::Right(n) => {
-                dial = (dial + n) % 100;
-            }
-        }
-
-        if dial == 0 {
-            zero_count += 1;
-        }
-    }
-
-    Ok(zero_count.to_string())
+    todo!()
 }
 
 #[tracing::instrument(skip(input))]
@@ -72,18 +29,11 @@ mod tests {
 
     #[test_log::test]
     fn it_works() {
-        let input = r##"L68
-L30
-R48
-L5
-R60
-L55
-L1
-L99
-R14
-L82
+        let input = r##"11-22,95-115,998-1012,1188511880-1188511890,222220-222224,
+1698522-1698528,446443-446449,38593856-38593862,565653-565659,
+824824821-824824827,2121212118-2121212124
 "##;
         let result = process(input).unwrap();
-        assert_eq!(result, "3");
+        assert_eq!(result, "1227775554");
     }
 }
